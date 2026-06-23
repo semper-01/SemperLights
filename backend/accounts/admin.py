@@ -1,3 +1,36 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.html import format_html
 
-# Register your models here.
+from .models import User
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+	model = User
+	list_display = ('email', 'username', 'first_name', 'last_name', 'is_staff', 'created_at')
+	list_filter = ('is_staff', 'is_superuser', 'is_active')
+	search_fields = ('email', 'username', 'first_name', 'last_name')
+	ordering = ('-created_at',)
+	readonly_fields = ('created_at', 'updated_at')
+
+	fieldsets = (
+		(None, {'fields': ('email', 'username', 'password')}),
+		('Personal info', {'fields': ('first_name', 'last_name', 'profile_image', 'bio', 'phone')}),
+		('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+		('Important dates', {'fields': ('last_login', 'created_at', 'updated_at')}),
+	)
+
+	add_fieldsets = (
+		(None, {
+			'classes': ('wide',),
+			'fields': ('email', 'username', 'password1', 'password2'),
+		}),
+	)
+
+	def profile_image_preview(self, obj):
+		if obj.profile_image:
+			return format_html('<img src="{}" style="max-height: 50px;" />', obj.profile_image.url)
+		return ''
+
+	profile_image_preview.short_description = 'Profile Image'
