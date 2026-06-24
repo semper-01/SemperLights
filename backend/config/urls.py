@@ -22,6 +22,12 @@ from django.urls import include, path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('accounts.urls')),
+    path('api/', include('portfolio.urls')),
+    path('api/', include('services.urls')),
+    path('api/', include('appointments.urls')),
+    path('api/', include('blog.urls')),
+    path('api/', include('notifications.urls')),
+    path('api/', include('core.urls')),
 ]
 
 # Serve media files in development
