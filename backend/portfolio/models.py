@@ -1,5 +1,4 @@
 from django.db import models
-from django.core.validators import URLValidator
 
 from core.models import TimestampedModel
 
@@ -21,7 +20,7 @@ class Category(models.Model):
 class Technology(models.Model):
 	name = models.CharField(max_length=150, unique=True)
 	icon = models.ImageField(upload_to='technologies/', blank=True, null=True)
-	website = models.URLField(blank=True, validators=[URLValidator()])
+	website = models.URLField(blank=True)
 
 	class Meta:
 		verbose_name = 'Technology'
@@ -52,8 +51,8 @@ class Project(TimestampedModel):
 	featured = models.BooleanField(default=False, db_index=True)
 	display_order = models.PositiveIntegerField(default=0)
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True)
-	live_demo = models.URLField(blank=True, validators=[URLValidator()])
-	github_url = models.URLField(blank=True, validators=[URLValidator()])
+	live_demo = models.URLField(blank=True)
+	github_url = models.URLField(blank=True)
 	started_at = models.DateField(null=True, blank=True)
 	completed_at = models.DateField(null=True, blank=True)
 

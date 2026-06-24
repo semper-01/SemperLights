@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import validate_email, URLValidator
+from django.core.validators import validate_email
 
 
 class TimestampedModel(models.Model):
@@ -23,13 +23,14 @@ class SiteSetting(TimestampedModel):
 	phone = models.CharField(max_length=50, blank=True)
 	location = models.CharField(max_length=255, blank=True)
 
-	linkedin = models.URLField(blank=True, validators=[URLValidator()])
-	github = models.URLField(blank=True, validators=[URLValidator()])
-	instagram = models.URLField(blank=True, validators=[URLValidator()])
-	x = models.URLField(blank=True, validators=[URLValidator()])
-	youtube = models.URLField(blank=True, validators=[URLValidator()])
+	linkedin = models.URLField(blank=True)
+	github = models.URLField(blank=True)
+	instagram = models.URLField(blank=True)
+	x = models.URLField(blank=True)
+	youtube = models.URLField(blank=True)
 
 	footer_text = models.TextField(blank=True)
+	singleton_enforcer = models.BooleanField(default=True, unique=True, editable=False)
 
 	class Meta:
 		verbose_name = 'Site Setting'
