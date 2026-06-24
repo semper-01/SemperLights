@@ -21,13 +21,15 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('accounts.urls')),
-    path('api/', include('portfolio.urls')),
-    path('api/', include('services.urls')),
-    path('api/', include('appointments.urls')),
-    path('api/', include('blog.urls')),
-    path('api/', include('notifications.urls')),
-    path('api/', include('core.urls')),
+    
+    # API versioning - v1
+    path('api/v1/', include('accounts.urls')),
+    path('api/v1/', include('portfolio.urls')),
+    path('api/v1/', include('services.urls')),
+    path('api/v1/', include('appointments.urls')),
+    path('api/v1/', include('blog.urls')),
+    path('api/v1/', include('notifications.urls')),
+    path('api/v1/', include('core.urls')),
 ]
 
 # Serve media files in development
