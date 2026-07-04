@@ -31,6 +31,15 @@ class IsAdmin(BasePermission):
         return request.user and request.user.is_authenticated and request.user.is_superuser
 
 
+class IsStaffOrCreate(BasePermission):
+    """Allow public POST creates while restricting all other actions to staff."""
+
+    def has_permission(self, request, view):
+        if request.method == 'POST' and getattr(view, 'action', None) == 'create':
+            return True
+        return request.user and request.user.is_authenticated and request.user.is_staff
+
+
 class ReadOnlyOrAuthenticated(BasePermission):
     """
     Permission class allowing read-only access for all users,

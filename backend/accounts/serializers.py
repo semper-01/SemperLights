@@ -120,10 +120,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'phone',
             'profile_image',
             'is_active',
+            'is_staff',
+            'is_superuser',
             'created_at',
             'updated_at',
         )
-        read_only_fields = ('id', 'email', 'is_active', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'email', 'is_active', 'is_staff', 'is_superuser', 'created_at', 'updated_at')
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
