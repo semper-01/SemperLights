@@ -1,9 +1,11 @@
 from rest_framework import filters, permissions, viewsets
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.permissions import IsStaff
+from accounts.permissions import IsStaff, IsStaffOrCreate
 from appointments.models import Appointment
 from appointments.serializers import AppointmentSerializer
 from appointments.services import AppointmentService
@@ -16,20 +18,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     search_fields = ('full_name', 'email')
     ordering_fields = ('created_at', 'updated_at', 'preferred_date')
     ordering = ('-created_at',)
-
-    def get_permissions(self):
-        if self.request.method == 'POST':
-            return [permissions.IsAuthenticated()]
-        if self.request.method in permissions.SAFE_METHODS:
-            return [permissions.IsAuthenticated()]
-        return [IsStaff()]
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    permission_classes = [IsStaffOrCreate]
 
     def get_queryset(self):
         user = self.request.user
         if user.is_authenticated and user.is_staff:
             queryset = super().get_queryset()
-        elif user.is_authenticated:
-            queryset = Appointment.objects.filter(email=user.email)
         else:
             queryset = Appointment.objects.none()
         status = self.request.query_params.get('status')

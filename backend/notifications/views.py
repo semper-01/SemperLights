@@ -1,9 +1,11 @@
 from rest_framework import filters, permissions, viewsets
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.permissions import IsStaff
+from accounts.permissions import IsStaff, IsStaffOrCreate
 from notifications.models import ContactMessage, NewsletterSubscriber
 from notifications.serializers import ContactMessageSerializer, NewsletterSubscriberSerializer
 from notifications.services import NotificationService
@@ -16,11 +18,8 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
     search_fields = ('name', 'email', 'subject')
     ordering_fields = ('created_at',)
     ordering = ('-created_at',)
-
-    def get_permissions(self):
-        if self.request.method == 'POST':
-            return [permissions.IsAuthenticated()]
-        return [IsStaff()]
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    permission_classes = [IsStaffOrCreate]
 
     def perform_create(self, serializer):
         serializer.save()

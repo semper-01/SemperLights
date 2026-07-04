@@ -5,15 +5,23 @@ from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
 
+from accounts.permissions import IsStaff
 from .models import SiteSetting
 from .serializers import SiteSettingSerializer
 from .utils import StandardResponse
 
 
-class SiteSettingViewSet(viewsets.ReadOnlyModelViewSet):
+class SiteSettingViewSet(viewsets.ModelViewSet):
     queryset = SiteSetting.objects.all()
     serializer_class = SiteSettingSerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [IsStaff()]
+
+    def perform_update(self, serializer):
+        serializer.save()
 
 
 @api_view(['GET'])
