@@ -53,7 +53,7 @@ services:
     expose:
       - "8000"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v1/", "--silent", "--output", "/dev/null"]
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v1/health/", "--silent", "--output", "/dev/null"]
       interval: 30s
       timeout: 10s
       retries: 3
