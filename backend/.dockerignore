@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.egg
+
+# Environment
+.env
+.env.local
+
+# Database
+db.sqlite3
+
+# Logs
+logs/*.log
+
+# Static files (collected at runtime)
+staticfiles/
+
+# Media files (user uploads)
+media/*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+entrypoint.sh
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/

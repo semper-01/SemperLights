@@ -16,13 +16,16 @@ def validate_required_env_vars():
     """Validate that required environment variables are set for production."""
     required_vars = [
         'SECRET_KEY',
-        'DB_NAME',
-        'DB_USER',
-        'DB_PASSWORD',
-        'DB_HOST',
         'ALLOWED_HOSTS',
         'CORS_ALLOWED_ORIGINS',
     ]
+
+    # Either DATABASE_URL or the individual DB_* variables must be set
+    if not os.getenv('DATABASE_URL'):
+        db_required = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
+        missing_db = [var for var in db_required if not os.getenv(var)]
+        if missing_db:
+            required_vars.extend(missing_db)
 
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
@@ -45,16 +48,39 @@ DEBUG = False
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
 
 # Database - PostgreSQL required for production
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+# Support both DATABASE_URL (preferred) and individual DB_* variables
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    import re
+    # Parse DATABASE_URL: postgres://user:password@host:port/dbname
+    match = re.match(
+        r'postgres(?:ql)?://(?P<user>[^:]+):(?P<password>[^@]+)@(?P<host>[^:]+):?(?P<port>\d+)?/(?P<name>.+)',
+        DATABASE_URL
+    )
+    if match:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': match.group('name'),
+                'USER': match.group('user'),
+                'PASSWORD': match.group('password'),
+                'HOST': match.group('host'),
+                'PORT': match.group('port') or '5432',
+            }
+        }
+    else:
+        raise ValueError(f"Invalid DATABASE_URL format: {DATABASE_URL}")
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
     }
-}
 
 # CORS Configuration - Read from environment
 CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS')
@@ -62,7 +88,8 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS') or CORS_ALLOWED_ORIGINS
 
 # Security settings for production
-SECURE_SSL_REDIRECT = True
+# Disable SSL redirect when behind Nginx (Nginx handles SSL termination)
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() == 'true'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
@@ -74,3 +101,15 @@ SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# JWT settings from environment
+from datetime import timedelta
+SIMPLE_JWT.update({
+    'ACCESS_TOKEN_LIFETIME': timedelta(
+        minutes=int(os.getenv('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', '60'))
+    ),
+    'REFRESH_TOKEN_LIFETIME': timedelta(
+        days=int(os.getenv('JWT_REFRESH_TOKEN_LIFETIME_DAYS', '1'))
+    ),
+    'SIGNING_KEY': os.getenv('JWT_SIGNING_KEY') or SECRET_KEY,
+})
