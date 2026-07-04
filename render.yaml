@@ -1,0 +1,101 @@
+# =============================================================================
+# Semper Lights — Render Blueprint
+# =============================================================================
+# Render Blueprint (render.yaml) for automated infrastructure provisioning.
+#
+# Services:
+#   - backend   : Django REST API (Python / Gunicorn / Docker)
+#   - frontend  : React SPA served by Nginx (Docker)
+#
+# Environment variables marked with `sync: false` must be set manually
+# in the Render dashboard or via the Render CLI.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Backend — Django REST API
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: semperlights-backend
+    runtime: docker
+    repo: https://github.com/semper-01/SemperLights
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        sync: false
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: semperlights-backend.onrender.com,.onrender.com,localhost
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://semperlights-frontend.onrender.com,https://semperlights.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://semperlights-frontend.onrender.com,https://semperlights.onrender.com
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_NAME
+        value: semperlights
+      - key: DB_USER
+        value: postgres
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: JWT_ACCESS_TOKEN_LIFETIME_MINUTES
+        value: "60"
+      - key: JWT_REFRESH_TOKEN_LIFETIME_DAYS
+        value: "1"
+      - key: APPLICATION_VERSION
+        value: "1.0.0"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+    disk:
+      name: static-media
+      mountPath: /app/staticfiles
+      sizeGB: 1
+    healthCheckPath: /api/v1/health/
+    numInstances: 1
+    plan: starter
+
+  # ---------------------------------------------------------------------------
+  # Frontend — React SPA served by Nginx
+  # ---------------------------------------------------------------------------
+  # NOTE: A Web Service with runtime: docker is required because the final
+  # image runs an Nginx server (see frontend/Dockerfile multi-stage build).
+  # Render's "Static Site" type is only suitable for pure static output
+  # served by Render's own CDN.
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: semperlights-frontend
+    runtime: docker
+    repo: https://github.com/semper-01/SemperLights
+    branch: main
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: /api/v1
+      - key: VITE_APP_NAME
+        value: Semper Lights
+    healthCheckPath: /
+    numInstances: 1
+    plan: starter
