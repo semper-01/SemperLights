@@ -1,7 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import config from "@/config";
 import { storage } from "@/utils/storage";
-import { ROUTES } from "@/constants";
 
 const apiClient = axios.create({
   baseURL: config.api.baseURL,
@@ -48,11 +47,9 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest);
         } catch {
           storage.clearAuth();
-          window.location.href = ROUTES.LOGIN;
         }
-      } else {
+      } else if (!originalRequest.url?.includes("/auth/refresh/")) {
         storage.clearAuth();
-        window.location.href = ROUTES.LOGIN;
       }
     }
 
