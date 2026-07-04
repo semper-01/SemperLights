@@ -107,9 +107,18 @@ class NotificationAPITests(TestCase):
         self.user = create_user(email='subscriber@example.com', username='subscriber')
         self.staff = create_staff()
 
-    def test_contact_message_requires_auth_for_create_and_staff_for_list(self):
-        anonymous = self.client.post('/api/v1/contact-messages/', {}, content_type='application/json')
-        self.assertEqual(anonymous.status_code, 401)
+    def test_contact_messages_allow_public_create_and_restrict_listing_to_staff(self):
+        anonymous = self.client.post(
+            '/api/v1/contact-messages/',
+            {
+                'name': 'Visitor',
+                'email': 'visitor@example.com',
+                'subject': 'Hello',
+                'message': 'Body',
+            },
+            format='json',
+        )
+        self.assertEqual(anonymous.status_code, 201)
 
         create = auth_client(self.user).post(
             '/api/v1/contact-messages/',

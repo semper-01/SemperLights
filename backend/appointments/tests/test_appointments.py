@@ -108,12 +108,21 @@ class AppointmentAPITests(TestCase):
         self.service = create_service()
         self.appointment = create_appointment(service=self.service, email=self.user.email)
 
-    def test_anonymous_cannot_list_or_create_appointments(self):
-        self.assertEqual(self.client.get('/api/v1/appointments/').status_code, 401)
-        response = self.client.post('/api/v1/appointments/', {}, content_type='application/json')
-        self.assertEqual(response.status_code, 401)
+    def test_anonymous_can_create_but_not_list_appointments(self):
+        self.assertEqual(self.client.get('/api/v1/appointments/').status_code, 403)
+        response = self.client.post(
+            '/api/v1/appointments/',
+            {
+                'full_name': 'Visitor Client',
+                'email': 'visitor@example.com',
+                'service': self.service.id,
+                'preferred_date': future_date().isoformat(),
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
 
-    def test_authenticated_user_can_create_and_only_list_own_appointments(self):
+    def test_authenticated_non_staff_user_can_create_but_not_list_appointments(self):
         client = auth_client(self.other)
         create = client.post(
             '/api/v1/appointments/',
@@ -128,9 +137,7 @@ class AppointmentAPITests(TestCase):
         self.assertEqual(create.status_code, 201)
 
         listing = client.get('/api/v1/appointments/')
-        self.assertEqual(listing.status_code, 200)
-        self.assertEqual(listing.data['count'], 1)
-        self.assertEqual(listing.data['results'][0]['email'], self.other.email)
+        self.assertEqual(listing.status_code, 403)
 
     def test_staff_can_update_status_and_delete(self):
         client = auth_client(self.staff)
