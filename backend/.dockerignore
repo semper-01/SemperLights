@@ -36,7 +36,7 @@ media/*
 # Docker
 Dockerfile
 .dockerignore
-entrypoint.sh
+# #entrypoint.sh
 
 # OS
 .DS_Store
