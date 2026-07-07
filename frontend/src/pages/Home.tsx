@@ -201,7 +201,7 @@ const Home: React.FC = () => {
 
       <section className="border-t border-[color:var(--border)] py-20">
         <Container>
-          <SectionTitle title="What I Do" subtitle="Focused services for modern digital work" />
+          <SectionTitle title="What We Do" subtitle="Focused services for modern digital work" />
           {servicesToShow.length > 0 ? (
             <div className="mt-10 grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
               {servicesToShow.map((service) => (

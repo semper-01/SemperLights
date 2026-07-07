@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import { Container } from "@/components/ui/Container";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Button } from "@/components/ui/Button";
@@ -288,7 +289,7 @@ const About: React.FC = () => {
               <Badge
                 key={area}
                 variant="default"
-                className="bg-[color:var(--surface-muted)] text-[color:var(--text)] border border-[color:var(--border)] px-4 py-2 text-sm"
+                className="bg-[color:var(--surface-muted)] text-[color:var(--text)] dark:text-[color:var(--text)] border border-[color:var(--border)] px-4 py-2 text-sm"
               >
                 {area}
               </Badge>
