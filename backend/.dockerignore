@@ -34,9 +34,7 @@ media/*
 .gitignore
 
 # Docker
-Dockerfile
-.dockerignore
-# #entrypoint.sh
+
 
 # OS
 .DS_Store
