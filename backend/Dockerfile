@@ -57,4 +57,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl --fail http://localhost:8000/api/v1/health/ --silent --output /dev/null --connect-timeout 5 --max-time 10
 
-ENTRYPOINT ["/entrypoint.sh"]
+
