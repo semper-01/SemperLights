@@ -10,6 +10,9 @@
 
 set -e
 
+# Create logs directory if it doesn't exist
+mkdir -p /app/logs
+
 echo "==> Running database migrations..."
 python manage.py migrate --noinput
 

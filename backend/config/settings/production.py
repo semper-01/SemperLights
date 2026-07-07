@@ -52,22 +52,29 @@ ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
 DATABASE_URL = os.getenv('DATABASE_URL')
 if DATABASE_URL:
     import re
-    # Parse DATABASE_URL: postgres://user:password@host:port/dbname
-    match = re.match(
-        r'postgres(?:ql)?://(?P<user>[^:]+):(?P<password>[^@]+)@(?P<host>[^:]+):?(?P<port>\d+)?/(?P<name>.+)',
-        DATABASE_URL
-    )
-    if match:
+    from urllib.parse import urlparse, parse_qs
+    # Parse DATABASE_URL: postgres://user:password@host:port/dbname?sslmode=require
+    parsed = urlparse(DATABASE_URL)
+    if parsed.scheme in ('postgres', 'postgresql'):
+        db_name = parsed.path.lstrip('/')
+        # Remove query string from db name if present
+        if '?' in db_name:
+            db_name = db_name.split('?')[0]
+        db_options = parse_qs(parsed.query) if parsed.query else {}
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.postgresql',
-                'NAME': match.group('name'),
-                'USER': match.group('user'),
-                'PASSWORD': match.group('password'),
-                'HOST': match.group('host'),
-                'PORT': match.group('port') or '5432',
+                'NAME': db_name,
+                'USER': parsed.username,
+                'PASSWORD': parsed.password,
+                'HOST': parsed.hostname,
+                'PORT': parsed.port or '5432',
+                'OPTIONS': {},
             }
         }
+        # Pass SSL mode if specified in URL
+        if 'sslmode' in db_options:
+            DATABASES['default']['OPTIONS']['sslmode'] = db_options['sslmode'][0]
     else:
         raise ValueError(f"Invalid DATABASE_URL format: {DATABASE_URL}")
 else:

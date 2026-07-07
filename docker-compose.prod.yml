@@ -1,0 +1,141 @@
+# =============================================================================
+# Semper Lights — Production Docker Compose (Azure Container Apps)
+# =============================================================================
+# This override file extends docker-compose.yml with production settings
+# for Azure Container Apps deployments. It removes the PostgreSQL service
+# (use Azure Database for PostgreSQL Flexible Server) and optimizes for
+# container-only workloads.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — REMOVED in production (use Azure Database for PostgreSQL)
+  # ---------------------------------------------------------------------------
+  postgres:
+    profiles:
+      - donotstart
+
+  # ---------------------------------------------------------------------------
+  # Django Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    image: semperlights.azurecr.io/semperlights-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - BUILD_ENV=production
+    container_name: semperlights-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      # All other environment variables are injected by Azure Container Apps
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8000/api/v1/health/",
+          "--silent",
+          "--output",
+          "/dev/null",
+          "--connect-timeout",
+          "5",
+          "--max-time",
+          "10"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  # ---------------------------------------------------------------------------
+  # React Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    image: semperlights.azurecr.io/semperlights-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: semperlights-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: semperlights.azurecr.io/semperlights-nginx:latest
+    container_name: semperlights-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+
+# ---------------------------------------------------------------------------
+# Named Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: azure_file
+    driver_opts:
+      share_name: semperlights-postgres-data
+      storage_account_name: ${AZURE_STORAGE_ACCOUNT}
+      storage_account_key: ${AZURE_STORAGE_KEY}
+  static_volume:
+    driver: azure_file
+    driver_opts:
+      share_name: semperlights-static
+      storage_account_name: ${AZURE_STORAGE_ACCOUNT}
+      storage_account_key: ${AZURE_STORAGE_KEY}
+  media_volume:
+    driver: azure_file
+    driver_opts:
+      share_name: semperlights-media
+      storage_account_name: ${AZURE_STORAGE_ACCOUNT}
+      storage_account_key: ${AZURE_STORAGE_KEY}
