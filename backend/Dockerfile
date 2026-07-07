@@ -45,13 +45,12 @@ COPY . .
 # ---------------------------------------------------------------------------
 # Create required directories for volume mounts
 # ---------------------------------------------------------------------------
-RUN mkdir -p /app/staticfiles /app/media
+RUN mkdir -p /app/staticfiles /app/media && \
+    chmod +x /app/entrypoint.sh
 
-# ---------------------------------------------------------------------------
-# Entrypoint
-# ---------------------------------------------------------------------------
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 EXPOSE 8000
 
