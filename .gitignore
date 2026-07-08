@@ -57,7 +57,6 @@ htmlcov/
 # Package managers
 node_modules/
 yarn.lock
-package-lock.json
 
 # OS
 .DS_Store
