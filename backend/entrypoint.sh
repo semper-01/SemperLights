@@ -8,16 +8,18 @@
 #   3. Starts Gunicorn
 # =============================================================================
 
-set -e
+set -ex
 
 # Create logs directory if it doesn't exist
 mkdir -p /app/logs
 
 echo "==> Running database migrations..."
-python manage.py migrate --noinput
+python -u manage.py migrate --noinput --verbosity 3
+echo "==> Database migrations completed."
 
 echo "==> Collecting static files..."
-python manage.py collectstatic --noinput --clear
+python -u manage.py collectstatic --noinput --clear
+echo "==> Static files collected."
 
 echo "==> Starting Gunicorn..."
 exec gunicorn config.wsgi:application \
