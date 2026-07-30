@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from accounts.permissions import IsStaff
 from .models import SiteSetting
 from .serializers import SiteSettingSerializer
-from .utils import StandardResponse
+from core.utils import StandardResponse
 
 
 class SiteSettingViewSet(viewsets.ModelViewSet):
