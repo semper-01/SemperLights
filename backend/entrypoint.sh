@@ -13,6 +13,10 @@ echo "==> Running Django system checks..."
 python manage.py check
 echo "==> Django system checks passed."
 
+echo "==> Running standalone PostgreSQL connectivity diagnostic (psycopg, no Django)..."
+timeout 60 python -u diagnose_postgres.py
+echo "==> PostgreSQL connectivity diagnostic completed."
+
 echo "==> Running database migrations (instrumented)..."
 timeout 120 python -u diagnose_migrate.py
 echo "==> Database migrations completed."
