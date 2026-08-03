@@ -13,8 +13,8 @@ echo "==> Running Django system checks..."
 python manage.py check
 echo "==> Django system checks passed."
 
-echo "==> Running database migrations..."
-timeout 120 python -u manage.py migrate --noinput --verbosity 3
+echo "==> Running database migrations (instrumented)..."
+timeout 120 python -u diagnose_migrate.py
 echo "==> Database migrations completed."
 
 echo "==> Collecting static files..."
