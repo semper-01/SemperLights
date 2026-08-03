@@ -1,28 +1,47 @@
 #!/bin/bash
-set -x
+set -exuo pipefail
 
 echo "========== START =========="
 
-echo "Python:"
+echo "==> Checking Python version..."
 python --version
 
-echo "Pip:"
+echo "==> Listing installed Python packages..."
 pip freeze
 
-echo "Checking Django..."
+echo "==> Running Django system checks..."
 python manage.py check
+echo "==> Django system checks passed."
 
-echo "Running migrations..."
-python manage.py migrate --noinput --verbosity 3
+echo "==> Running database migrations..."
+timeout 120 python -u manage.py migrate --noinput --verbosity 3
+echo "==> Database migrations completed."
 
-echo "Collecting static..."
+echo "==> Collecting static files..."
 python manage.py collectstatic --noinput --clear
+echo "==> Static files collected."
 
-echo "Testing WSGI import..."
+echo "==> Testing WSGI import..."
 python -c "import config.wsgi; print('WSGI OK')"
+echo "==> WSGI import successful."
 
-echo "Starting Gunicorn..."
+echo "==> Verifying health endpoint before starting Gunicorn..."
+python manage.py shell -c "
+import django
+from django.test import Client
+from django.test.utils import setup_test_environment
+setup_test_environment()
+client = Client()
+response = client.get('/api/v1/health/')
+print(f'Health endpoint status: {response.status_code}')
+print(f'Response: {response.content.decode()}')
+if response.status_code != 200:
+    import sys
+    sys.exit(1)
+"
+echo "==> Health endpoint verification passed."
 
+echo "==> Starting Gunicorn..."
 exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 1 \
