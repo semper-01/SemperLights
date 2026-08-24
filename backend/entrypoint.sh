@@ -1,5 +1,6 @@
 #!/bin/bash
-set -exuo pipefail
+
+set -xuo pipefail
 
 echo "========== START =========="
 
@@ -11,27 +12,26 @@ pip freeze
 
 echo "==> Running Django system checks..."
 python manage.py check
-echo "==> Django system checks passed."
+echo "==> CHECK PASSED"
 
-echo "==> Running standalone PostgreSQL connectivity diagnostic (psycopg, no Django)..."
+echo "==> Running PostgreSQL diagnostic..."
 timeout 60 python -u diagnose_postgres.py
-echo "==> PostgreSQL connectivity diagnostic completed."
+echo "==> POSTGRES DIAGNOSTIC PASSED"
 
-echo "==> Running database migrations (instrumented)..."
+echo "==> Running migrations diagnostic..."
 timeout 120 python -u diagnose_migrate.py
-echo "==> Database migrations completed."
+echo "==> MIGRATIONS PASSED"
 
 echo "==> Collecting static files..."
 python manage.py collectstatic --noinput --clear
-echo "==> Static files collected."
+echo "==> COLLECTSTATIC PASSED"
 
 echo "==> Testing WSGI import..."
 python -c "import config.wsgi; print('WSGI OK')"
-echo "==> WSGI import successful."
+echo "==> WSGI PASSED"
 
-echo "==> Verifying health endpoint before starting Gunicorn..."
+echo "==> Testing health endpoint..."
 python manage.py shell -c "
-import django
 from django.test import Client
 from django.test.utils import setup_test_environment
 setup_test_environment()
@@ -40,12 +40,12 @@ response = client.get('/api/v1/health/')
 print(f'Health endpoint status: {response.status_code}')
 print(f'Response: {response.content.decode()}')
 if response.status_code != 200:
-    import sys
-    sys.exit(1)
+    raise SystemExit(1)
 "
-echo "==> Health endpoint verification passed."
+echo "==> HEALTH CHECK PASSED"
 
 echo "==> Starting Gunicorn..."
+
 exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 1 \
