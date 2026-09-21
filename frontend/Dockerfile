@@ -13,13 +13,36 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# --- Configurable API base URL (injected at build time) ---------------------
+# Vite embeds VITE_* variables into the bundle at BUILD TIME, so the
+# production API URL must be supplied here via:
+#     docker build --build-arg VITE_API_BASE_URL=https://<backend-host>/api/v1
+# This keeps the value environment-configurable instead of hard-coding a
+# deployment-specific URL in React/TypeScript source. When omitted, the
+# sealed local default (frontend/.env) is used, e.g. http://localhost:8000/api/v1.
+ARG VITE_API_BASE_URL
+ARG VITE_APP_NAME=Semper Lights
+
 # Install dependencies (layer caching)
 COPY package.json package-lock.json* ./
 RUN npm ci --no-audit --no-fund
 
+# Ensure npm-installed CLI shims are executable (some container volumes strip exec bits)
+RUN chmod +x node_modules/.bin/* 2>/dev/null || true
+
 # Copy source and build
 COPY . .
-RUN npm run build
+
+# Ensure the requested build-time value wins over the shipped local .env:
+# in `vite build` (mode=production) the `.env.production` file takes
+# precedence over the base `.env` file. `tsc`/`vite` are invoked via `node`
+# directly (rather than npm's node_modules/.bin shims) so the build is robust
+# on container build workspaces that do not preserve script exec bits.
+RUN if [ -n "$VITE_API_BASE_URL" ]; then \
+      printf 'VITE_API_BASE_URL=%s\nVITE_APP_NAME=%s\n' "$VITE_API_BASE_URL" "$VITE_APP_NAME" > .env.production; \
+    fi \
+    && node node_modules/typescript/bin/tsc -b \
+    && node node_modules/vite/bin/vite.js build
 
 # ---------------------------------------------------------------------------
 # Stage 2 — Production Nginx

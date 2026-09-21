@@ -66,11 +66,21 @@ jobs:
       # -----------------------------------------------------------------------
       # Step 5 — Build and push frontend image
       # -----------------------------------------------------------------------
+      # The production API base URL is injected at build time from the GitHub
+      # Actions repository variable `VITE_API_BASE_URL` (set in
+      # Repo → Settings → Secrets and variables → Actions → Variables).
+      # Vite bakes VITE_* variables into the bundle, so it must be present at
+      # image build time — a runtime env var on an already-built static bundle
+      # is NOT reflected. Keep the value in the repo variable so it is not
+      # hard-coded into React/TypeScript source.
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            VITE_APP_NAME=Semper Lights
           push: true
           tags: |
             semperlightsregistry.azurecr.io/semperlights-frontend:latest
