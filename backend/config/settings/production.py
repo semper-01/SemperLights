@@ -4,6 +4,7 @@ Production settings for config project.
 
 import os
 from .base import *
+from config.media import get_production_media_url
 
 
 def env_list(name):
@@ -44,6 +45,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+MEDIA_URL = get_production_media_url(os.getenv('MEDIA_URL'))
 
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
 
