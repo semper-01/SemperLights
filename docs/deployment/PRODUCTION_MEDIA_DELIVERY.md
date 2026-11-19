@@ -2,24 +2,37 @@
 
 ## Architecture
 
-Production media uses the existing Azure Files design: a single persistent
-share is mounted read/write at `/app/media` in the backend Container App. Django
-keeps its existing `FileSystemStorage` and `ImageField` names, so database rows
-and upload forms do not change. The backend serves `/media/<path>` through a
+The intended production design is an existing Azure Files share mounted
+read/write at `/app/media` in the backend Container App. Django keeps its
+existing filesystem storage and `ImageField` names, so database rows and upload
+forms do not change. The backend serves `/media/<path>` through a
 production-safe file response endpoint; it does not rely on `DEBUG=True`,
-Django's development static-file helper, or the container's ephemeral
-filesystem.
+Django's development media helper, or the container's ephemeral filesystem.
 
-The Container Apps and storage account listing could not be completed from the
-development environment. Do not assume the live apps have this mount. The
-project's Azure deployment guide and production Compose configuration describe
-an Azure Files share named `semperlights-media`, but the live share, app
-revision, and mount must be verified before deployment.
+The source code supports this design, but the live Azure configuration did not
+have the required storage setup at the read-only inspection on 2026-11-19:
+
+- The backend Container App had no volume or mount at `/app/media`.
+- No Azure Files storage registration was listed for its Container Apps
+  environment.
+- The backend had no `MEDIA_URL` environment variable.
+
+Therefore production media is not yet durably configured or verified. The
+deployment workflow now checks these prerequisites and stops before publishing
+images or changing either app if they are missing. Do not infer that the
+`docker-compose.prod.yml` Azure Files declaration is active in Container Apps.
 
 `MEDIA_URL` is the canonical public HTTPS URL for that same serving route. Set
 it to the backend app's public origin (or a public proxy that routes `/media/`
 to the mounted backend media). Django then emits absolute media URLs for all
 `ImageField`/`FileField` API fields, including the founder profile image.
+The current deployment preflight specifically requires external backend
+ingress and that `MEDIA_URL` use its FQDN. If an approved proxy is adopted,
+update and test that preflight before using the proxy URL.
+
+See [AUTOMATED_AZURE_DEPLOYMENT.md](./AUTOMATED_AZURE_DEPLOYMENT.md) for the
+GitHub Actions deployment flow, required OIDC configuration, media preflight,
+manual deployment, and rollback steps.
 
 ## Required Azure owner/ICT actions
 
@@ -46,11 +59,11 @@ az containerapp show \
 ```
 
 1. Reuse an existing Azure Files share only after verifying it is the intended
-   media share and backing up its contents. If none exists, the owner/ICT team
-   must provision an approved share and register it with the Container Apps
-   environment. Supply storage credentials only through the approved Azure
-   control plane/secret workflow; never paste them into source, logs, or shell
-   history.
+   media share and backing up its contents. No share was registered in the
+   inspected Container Apps environment. If no approved share exists, the
+   owner/ICT team must provision one and register it with that environment.
+   Supply storage credentials only through the approved Azure control
+   plane/secret workflow; never paste them into source, logs, or shell history.
 2. In the Container Apps environment, register the share under **Storage** as
    an Azure Files mount with read/write access. In the backend Container App's
    next revision, add a volume using that registered storage name and mount it
@@ -71,10 +84,11 @@ az containerapp show \
      --set-env-vars "MEDIA_URL=https://<public-backend-host>/media/"
    ```
 
-4. Build and deploy the new backend image only after the mount and `MEDIA_URL`
-   are configured. The backend image contains the URL validation and media
-   endpoint. The changed frontend HTML also requires a frontend image build;
-   the existing GitHub Actions workflow builds images but does not deploy them.
+4. The automated release workflow checks that the mount, registered
+   read/write share, and `MEDIA_URL` are configured before it builds, publishes,
+   or deploys either application. Configure these prerequisites before enabling
+   a production release. The backend image contains the URL validation and
+   media endpoint; the frontend image includes the favicon correction.
 5. After release, upload one test image through the existing dashboard, read
    its API URL, and verify it returns HTTP 200 with the correct image content
    type. Restart or replace a backend revision and confirm the same URL still
@@ -86,19 +100,32 @@ the browser at an internal Container Apps hostname.
 
 ## Existing media and migration safety
 
-The local repository contains 89 media files under `backend/media/`, including
-profile, service, technology, and project assets. This does not establish that
-these are the complete originals for production, nor whether the live Azure
-share already contains them. Production returned 404 before this repair
-because its Gunicorn app had no production media route; a 404 alone does not
-prove that the mounted share is empty.
+The local `backend/media/` directory contained 89 files at this inspection,
+including profile, service, technology, and project assets. This does not
+establish that these are the complete originals for production, nor whether an
+Azure share contains them. The backend Docker build excludes local media. A
+production 404 does not prove that the share is empty; it can also result from
+the missing mount or media route/configuration.
+
+All seven Home page image paths previously observed failing in production had
+matching files in the local `backend/media/` tree. This establishes local
+copies for those visible examples only, not for every production database
+reference.
+
+The full set of production database file references has not been compared with
+the local inventory or an Azure share. The live share was not
+mounted/registered, and no production database or share contents were read. Do
+not migrate on the basis of a 404 response alone.
 
 Before migrating any files:
 
 1. Back up the current share and inventory production media field names against
-   files on that share using an authorized, read-only check.
-2. Compare only missing relative paths with `backend/media/`. Confirm each
-   candidate is the intended original; do not alter database field values.
+   files on that share using an authorized, read-only check. Keep any path
+   inventory in an access-controlled location because filenames can contain
+   personal information.
+2. Compare only missing relative paths with the local `backend/media/`
+   inventory. Confirm each candidate is the intended original; do not alter
+   database field values.
 3. Upload only the individually confirmed missing files, preserving their
    relative names (for example, `profiles/...` or
    `projects/thumbnails/...`) and using a transfer operation configured to
@@ -109,7 +136,8 @@ Before migrating any files:
    media.
 
 No database migration is required. Existing `ImageField` paths remain
-unchanged. No files are copied into the container image.
+unchanged. No files are copied into the container image. No media migration has
+been performed.
 
 ## Favicon
 

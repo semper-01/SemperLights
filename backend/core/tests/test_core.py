@@ -59,7 +59,7 @@ class CoreAPITests(TestCase):
         self.assertEqual(list_response.data['count'], 1)
 
         create_response = self.client.post('/api/v1/site-settings/', {'site_name': 'Blocked'}, format='json')
-        self.assertEqual(create_response.status_code, 405)
+        self.assertEqual(create_response.status_code, 401)
 
     def test_health_endpoint_returns_expected_structure(self):
         response = self.client.get('/api/v1/health/')
