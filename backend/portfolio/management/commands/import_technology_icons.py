@@ -118,6 +118,7 @@ def ensure_svg_visible_on_dark(svg_bytes: bytes) -> bytes:
     """
 
     text = svg_bytes.decode("utf-8", errors="ignore")
+    text = re.sub(r"^\s*<\?xml[^?]*\?>\s*", "", text, count=1)
 
     viewbox_match = re.search(r"viewBox\s*=\s*\"([^\"]+)\"", text, flags=re.IGNORECASE)
     if viewbox_match:
@@ -126,31 +127,20 @@ def ensure_svg_visible_on_dark(svg_bytes: bytes) -> bytes:
         # Fallback to width/height.
         vb = "0 0 512 512"
 
-    # Subtle neutral background that works on dark + light.
-    # Uses currentColor? No—set an explicit neutral with alpha.
-    wrapper = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{vb}\">
-  <rect x=\"0\" y=\"0\" width=\"100%\" height=\"100%\" rx=\"96\" ry=\"96\" fill=\"rgba(148,163,184,0.18)\" />
-  <!-- Embedded original logo (verbatim) -->
-  <g>
-    {text}
-  </g>
-</svg>
-"""
-
-    # The embedded SVG may include its own <svg> root; keeping it as-is avoids
-    # recoloring/cropping. Some SVGs may not render inside; in that case wrapper
-    # still preserves bytes, but DOM may be nested incorrectly.
-    # To improve compatibility, if the original includes an <svg> root, strip it.
-    # We'll attempt that cheaply.
     if "<svg" in text.lower():
-        # Strip outer <svg ...> and closing </svg>
-        stripped = re.sub(r"^\s*<svg[^>]*>", "", text, flags=re.IGNORECASE | re.DOTALL)
-        stripped = re.sub(r"</svg>\s*$", "", stripped, flags=re.IGNORECASE | re.DOTALL)
         wrapper = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{vb}\">
   <rect x=\"0\" y=\"0\" width=\"100%\" height=\"100%\" rx=\"96\" ry=\"96\" fill=\"rgba(148,163,184,0.18)\" />
-  {stripped}
+  {text}
+</svg>
+"""
+    else:
+        wrapper = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{vb}\">
+  <rect x=\"0\" y=\"0\" width=\"100%\" height=\"100%\" rx=\"96\" ry=\"96\" fill=\"rgba(148,163,184,0.18)\" />
+  <g>
+    {text}
+  </g>
 </svg>
 """
 
@@ -358,4 +348,3 @@ class Command(BaseCommand):
         self.stdout.write(f"Failed:   {failed}")
 
         self.stdout.write("\nDone.")
-

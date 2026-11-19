@@ -84,12 +84,9 @@ def fetch_lucide_icon(slug: str) -> Optional[bytes]:
 
 
 def ensure_svg_visible_on_dark(svg_bytes: bytes) -> bytes:
-    """Wrap SVG with a subtle neutral rounded background.
-
-    Matches the same approach used by the Technology icon importer
-    to ensure visibility on both dark and light themes.
-    """
+    """Wrap an SVG in a neutral background while preserving its root element."""
     text = svg_bytes.decode("utf-8", errors="ignore")
+    text = re.sub(r"^\s*<\?xml[^?]*\?>\s*", "", text, count=1)
 
     viewbox_match = re.search(r'viewBox\s*=\s*"([^"]+)"', text, flags=re.IGNORECASE)
     if viewbox_match:
@@ -98,12 +95,10 @@ def ensure_svg_visible_on_dark(svg_bytes: bytes) -> bytes:
         vb = "0 0 512 512"
 
     if "<svg" in text.lower():
-        stripped = re.sub(r"^\s*<svg[^>]*>", "", text, flags=re.IGNORECASE | re.DOTALL)
-        stripped = re.sub(r"</svg>\s*$", "", stripped, flags=re.IGNORECASE | re.DOTALL)
         wrapper = f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}">
   <rect x="0" y="0" width="100%" height="100%" rx="96" ry="96" fill="rgba(148,163,184,0.18)" />
-  {stripped}
+  {text}
 </svg>
 """
     else:
