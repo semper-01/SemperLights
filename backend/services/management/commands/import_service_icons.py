@@ -1,6 +1,7 @@
 import hashlib
 import re
 import traceback
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Dict, Optional
 from urllib.request import Request, urlopen
@@ -84,34 +85,63 @@ def fetch_lucide_icon(slug: str) -> Optional[bytes]:
 
 
 def ensure_svg_visible_on_dark(svg_bytes: bytes) -> bytes:
-    """Wrap an SVG in a neutral background while preserving its root element."""
+    """Wrap an SVG in a neutral background without nesting SVG roots."""
     text = svg_bytes.decode("utf-8", errors="ignore")
     text = re.sub(r"^\s*<\?xml[^?]*\?>\s*", "", text, count=1)
 
-    viewbox_match = re.search(r'viewBox\s*=\s*"([^"]+)"', text, flags=re.IGNORECASE)
-    if viewbox_match:
-        vb = viewbox_match.group(1)
-    else:
-        vb = "0 0 512 512"
+    try:
+        source_root = ET.fromstring(text)
+    except ET.ParseError:
+        return svg_bytes
 
-    if "<svg" in text.lower():
-        wrapper = f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}">
-  <rect x="0" y="0" width="100%" height="100%" rx="96" ry="96" fill="rgba(148,163,184,0.18)" />
-  {text}
-</svg>
-"""
-    else:
-        wrapper = f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}">
-  <rect x="0" y="0" width="100%" height="100%" rx="96" ry="96" fill="rgba(148,163,184,0.18)" />
-  <g>
-    {text}
-  </g>
-</svg>
-"""
+    vb = source_root.attrib.get("viewBox", "0 0 512 512")
+    icon_root = source_root
+    for child in list(source_root):
+        if child.tag.rsplit("}", 1)[-1].lower() == "svg":
+            icon_root = child
+            break
 
-    return wrapper.encode("utf-8")
+    inherited_attributes = (
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+    )
+    wrapper_attributes = {
+        key: icon_root.attrib[key]
+        for key in inherited_attributes
+        if key in icon_root.attrib
+    }
+    if icon_root is source_root:
+        vb = source_root.attrib.get("viewBox", vb)
+
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    wrapper = ET.Element(
+        "{http://www.w3.org/2000/svg}svg",
+        {"viewBox": vb},
+    )
+    ET.SubElement(
+        wrapper,
+        "{http://www.w3.org/2000/svg}rect",
+        {
+            "x": "0",
+            "y": "0",
+            "width": "100%",
+            "height": "100%",
+            "rx": "96",
+            "ry": "96",
+            "fill": "rgba(148,163,184,0.18)",
+        },
+    )
+    group = ET.SubElement(wrapper, "{http://www.w3.org/2000/svg}g", wrapper_attributes)
+    for child in list(icon_root):
+        group.append(child)
+
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        + ET.tostring(wrapper, encoding="unicode")
+    ).encode("utf-8")
 
 
 def filename_for_icon(name: str, content: bytes) -> str:

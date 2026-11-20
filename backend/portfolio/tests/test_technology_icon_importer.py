@@ -16,7 +16,7 @@ def test_technology_icon_wrapper_accepts_xml_declaration_and_preserves_svg_root(
 
     assert root.tag == f'{SVG_NAMESPACE}svg'
     assert root.find(f'{SVG_NAMESPACE}rect') is not None
-    embedded_svg = root.find(f'{SVG_NAMESPACE}svg')
-    assert embedded_svg is not None
-    assert embedded_svg.attrib['fill'] == 'currentColor'
-    assert embedded_svg.find(f'{SVG_NAMESPACE}path') is not None
+    group = root.find(f'{SVG_NAMESPACE}g')
+    assert group is not None
+    assert group.find(f'{SVG_NAMESPACE}path') is not None
+    assert root.find(f'{SVG_NAMESPACE}svg') is None
